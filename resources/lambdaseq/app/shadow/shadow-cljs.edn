@@ -1,0 +1,6 @@
+{:deps {:aliases [:cljs :test]}
+ :http {:host "127.0.0.1" :port 0}
+ :builds {:test {:target :node-test :output-to "target/tests.js" :ns-regexp "-test$" :autorun false}
+          :app {:target :browser :output-dir "target/public/js" :asset-path "/js"
+                :modules {:main {:init-fn {{namespace}}.core/init}}
+                :devtools {:http-root "target/public" :http-port 8080 :http-host "127.0.0.1"}}}}

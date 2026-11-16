@@ -5,6 +5,5 @@
 *.iml
 .nrepl-port
 .shadow-cljs/
-.mono/
 target/
 node_modules/

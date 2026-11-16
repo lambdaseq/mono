@@ -1,35 +1,33 @@
 # Verification: 2026-11-16
 
-The implementation was checked on macOS arm64 and Linux arm64.
-Linux checks used a cached Eclipse Temurin 25 container with read-only source and dependency mounts.
+The deps-new template architecture was checked on macOS arm64 with JDK 25 and Node.js 24.22.1.
+Template tests also ran in a Linux arm64 JDK container using an already resolved classpath.
 
 | Check | Result |
 | --- | --- |
-| Babashka unit suite | 25 tests, 268 assertions passed |
-| JVM unit suite | 25 tests, 268 assertions passed |
-| Linux JVM unit suite | 12 tests, 116 assertions passed |
-| clj-kondo | Zero errors or warnings |
-| Clojure source formatting | Passed; unrendered templates excluded |
-| Runtime jar packaging | Passed |
-| bbin installation | Passed in temporary directories on macOS and Linux |
-| Library-only starter | Seven assertions passed: generation without apps, testing, source jar, REPL lifecycle, adding a CLJS library, and cleaning |
-| Interactive init | Terminal wizard retried invalid answers and generated a passing library workspace; Ctrl-D cancelled without creating files |
-| Init automation | Nonterminal missing arguments returned usage without reading input; explicit flags bypassed prompts in unit tests |
-| Module wizards | Terminal app wizard generated plain CLJS; library wizard retried an existing name and generated Shadow CLJS; both modules passed compiled tests |
-| Module prompt validation | All app/library platform and compiler variants, input retries, cancellation without writes, and explicit argument bypass passed |
-| Generated CLJ modules | Tests, source jar, uberjar, and executable output passed |
-| Generated CLJS modules | Shadow and plain compiler app/library tests and builds passed |
-| Browser rendering | Both production app templates rendered the greeting in headless Chrome |
-| Failure propagation | CLJ, Shadow CLJS, and discovered plain CLJS test failures returned nonzero exits |
-| Deployment hooks | Explicit selection, module working directory, and repeated invocation passed |
-| JVM REPL lifecycle | Start, repeated start, status, stop, and occupied-port rejection passed |
-| CLJS REPL lifecycle | Shadow browser, plain browser, and Shadow library sessions started and stopped |
-| Shadow browser HTTP | Served HTML through the reported URL with browser request headers |
-| Linux CLI lifecycle | Installed, generated modules, tested, built, executed, started/stopped REPL, and cleaned outputs |
+| Template tests | Five tests, 102 assertions passed |
+| Generated workspace acceptance | Three tests, 21 assertions passed |
+| Root `clojure -T:build ci` | Passed template and acceptance suites |
+| Linux template tests | Five tests, 102 assertions passed |
+| clj-kondo | Zero errors and warnings in generator hooks, tests, and root build |
+| Source formatting | Passed; template source was formatted with placeholders preserved |
+| Both workspace layouts | Mixed and library-only projects generated without a mono runtime dependency |
+| Module variants | CLJ apps/libs and both CLJS compiler variants generated and compiled |
+| Executable app | Built uberjar and source execution printed `Hello, world!` |
+| Library artifacts | Custom source paths were packaged correctly |
+| Publication POMs | Registered local dependencies became Maven coordinates and retained dependency metadata |
+| Maven installation | Two dependent libraries installed into a temporary repository |
+| External consumer | An independent project loaded the installed jars and executed their code |
+| Failure propagation | Failing CLJ and CLJS tests and unknown module selections returned nonzero exits |
+| Publishing preconditions | Missing module selection and missing publication metadata failed locally |
+| Foreground REPL | Generated nREPL alias started through root `repl`; Ctrl-C terminated it |
+| Browser starters | Plain and Shadow release builds rendered `Hello, world!` in headless Chrome |
+| Subtraction | CLI, bbin tasks, manifest loader, background session manager, runtime code, and their tests removed |
 
-Integration scenarios passed across targeted runs. Run the complete acceptance suite with `bb integration`.
-Run one group with `bb integration jvm-workflow`, `bb integration cljs-workflow`, `bb integration cljs-repl-workflow`, or `bb integration library-workflow`.
+Clojars publication was not invoked. The acceptance suite verifies local installation and publishing preconditions without contacting a remote artifact repository.
+Generated-project execution checks ran on macOS. Linux checks cover generation and build-function unit tests, not the full acceptance suite.
 
-Tests use local runtime coordinates because the source workspace has no Git origin or commit.
-Publishing requires a reachable Git repository and a full commit SHA.
-Linux checks cover JVM workflows; browser rendering and CLJS lifecycle checks ran on macOS.
+Defaults: mixed CLJ workspace, CLJ modules, and Shadow CLJS when choosing CLJS.
+Library-only generation uses `:layout :libs`. Project owners choose license metadata before publication.
+
+Generated projects own their build code. Existing CLI-generated repositories retain their pinned runtime until migrated explicitly.

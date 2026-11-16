@@ -1,238 +1,166 @@
 # mono
 
-Generate Clojure monorepos with independent apps and libraries. Build, test, deploy, and manage module REPLs from the workspace root.
-
-Supports macOS and Linux.
+A deps-new template for self-contained Clojure workspaces with applications and libraries.
+Generated projects own their `build.clj`, module declarations, and dependencies. Extend those functions directly.
 
 ## Quickstart
 
 ### Prerequisites
 
-Install these tools and configure GitHub SSH access:
+Use macOS or Linux with these tools:
 
 | Tool | Version |
 | --- | --- |
-| Babashka | 1.13.220+ for the bbin installer below |
-| [bbin](https://github.com/babashka/bbin) | 0.2.5 |
-| Clojure CLI | 1.12.6.1673 |
-| JDK | 17+ for CLJ; 21+ for CLJS |
+| Clojure CLI | 1.12.6.1673 (tested) |
 | Git | 2.x |
-| Node.js | 24.x, for CLJS tests and Node REPLs |
+| JDK | 17+ for CLJ; 21+ for CLJS |
+| Node.js | 24.x for CLJS tests and Node REPLs |
 
 ### Setup
 
-Install the published commit:
+Clone this repository, or use an existing checkout:
 
 ```sh
-bbin install git@github.com:lambdaseq/mono.git \
-  --git/sha 2ec9233af83e23ed35a8ed839f80a90d16fc53a2 --as mono
-mono --help
+git clone git@github.com:lambdaseq/mono.git
+cd mono
+clojure -X:new :template lambdaseq/mono :name acme/my-project
 ```
 
-Ensure the directory printed by `bbin bin` is on your `PATH`.
+The `:new` alias loads a pinned deps-new release. It creates `my-project` with an example app that uses an example library.
+For a library-only workspace, add `:layout :libs`.
 
 ### Run
 
-Create an app-and-library workspace, test it, and build the app:
-
 ```sh
-mono init my-project --namespace acme
 cd my-project
-bb mono test
-bb mono build --module apps/example-app
+clojure -T:build ci
 java -jar apps/example-app/target/example-app-0.1.0.jar
 ```
 
 ### Verify it worked
 
-Tests report zero failures and errors. Running the jar prints `Hello, world!`.
-Use `bb mono` inside the workspace to load its pinned runtime version.
+Tests report zero failures and errors. The executable prints `Hello, world!`.
+Builds load only dependencies declared in the generated workspace; mono and deps-new are generation tools.
 
 ### Troubleshooting
 
-- **`mono: command not found`:** add the directory printed by `bbin bin` to your `PATH`.
-- **GitHub access fails:** configure an SSH key with repository access, then retry installation.
-- **Destination exists:** choose an empty or absent directory; generators refuse overwrites.
+- **Destination exists:** choose another directory; deps-new refuses to overwrite it by default.
+- **Unknown module:** register its keyword and settings in the generated `build.clj` modules map.
+- **Publishing metadata missing:** configure the generated `project` URL and license before calling `deploy`.
 
-## Commands
+## Templates
 
-| Command | Behavior |
-| --- | --- |
-| `mono init` | Open the initialization wizard in a terminal. |
-| `mono init DIR --namespace PREFIX` | Generate a working CLJ app and library. |
-| `mono init DIR --namespace PREFIX --template libs` | Generate a library-only workspace. |
-| `mono add app` | Open the app wizard in a terminal. |
-| `mono add lib` | Open the library wizard in a terminal. |
-| `mono add app NAME --platform clj` | Add an executable JVM app. |
-| `mono add lib NAME --platform cljs` | Add a CLJS source library. |
-| `mono add app NAME --platform cljs` | Add a Shadow CLJS browser app. |
-| `mono add app NAME --platform cljs --compiler cljs` | Add a plain CLJS browser app. |
-| `mono list` | List registered modules. |
-| `mono build [--module PATH]` | Build selected modules, or all modules. |
-| `mono test [--module PATH]` | Test selected modules, or all modules. |
-| `mono clean [--module PATH]` | Delete selected module output directories. |
-| `mono deploy --module PATH` | Execute the module's deployment command. |
-| `mono repl start --module PATH` | Start or return a managed module REPL. |
-| `mono repl status [--module PATH]` | Report managed REPL connection details. |
-| `mono repl stop --module PATH` | Stop a managed module REPL. |
+| Template | Result | Options |
+| --- | --- | --- |
+| `lambdaseq/mono` | Workspace with a library and optional example app | `:layout :mixed` (default) or `:libs` |
+| `lambdaseq/app` | Application module | `:platform :clj` (default) or `:cljs` |
+| `lambdaseq/lib` | Library module | `:platform :clj` (default) or `:cljs` |
 
-Repeat `--module` to select several modules. Commands run sequentially in manifest order and stop on failure.
-REPL start and stop accept exactly one module. Start accepts `--port` and `--timeout`; defaults are an automatic port and 120 seconds.
-Commands work from nested workspace directories.
+CLJS modules use `:compiler :shadow` by default. Choose `:compiler :cljs` for the plain compiler.
+The compiler option applies only to CLJS. Names follow ordinary qualified Clojure names, such as `acme.my-project/shared`.
 
-## Interactive generation
-
-Run `mono init` without arguments in a terminal to open the wizard.
-It asks for the project directory, namespace prefix, and starter: `mixed` or `libs`.
-Press Enter at the starter prompt to choose `mixed`.
-Invalid answers are retried. Ctrl-D or Ctrl-C cancels before generation.
-
-Explicit arguments skip the wizard, including in terminals.
-Without a terminal, missing arguments show usage and return a nonzero exit code.
-
-The global `mono` command delegates to the workspace's pinned runtime when used inside a workspace.
-
-Run `bb mono add app` or `bb mono add lib` in a terminal to open a module wizard.
-It asks for a name and platform: CLJ or CLJS. CLJ is the default.
-CLJS selections also ask whether to use Shadow CLJS, defaulting to yes.
-Existing module names are rejected before generation. Cancellation leaves the workspace unchanged.
-
-Supplying a name skips module prompts in every environment:
+Run these commands from the mono checkout:
 
 ```sh
-bb mono add app api --platform clj
-bb mono add lib shared --platform cljs --compiler shadow
-bb mono add app web --platform cljs --compiler cljs
+clojure -X:new :template lambdaseq/lib :name acme.my-project/shared \
+  :target-dir '"my-project/libs/shared"'
+
+clojure -X:new :template lambdaseq/app :name acme.my-project/web \
+  :target-dir '"my-project/apps/web"' :platform :cljs :compiler :shadow
 ```
 
-With an explicit name, omitted flags retain their defaults: CLJ, or Shadow when the platform is CLJS.
-Without a terminal, a missing name shows usage and returns a nonzero exit code.
+Register each module in the generated workspace's quoted `modules` map:
 
-## Library-only repositories
-
-```sh
-mono init my-libraries --namespace acme --template libs
-cd my-libraries
-bb mono test
-bb mono build
-bb mono repl start --module libs/example-lib
+```clojure
+:shared {:kind :lib :dir "libs/shared" :platform :clj :lib acme.my-project/shared}
+:web {:kind :app :dir "apps/web" :platform :cljs :compiler :shadow
+      :lib acme.my-project/web :main acme.my-project.web.core}
 ```
 
-The `libs` template generates a CLJ library and omits `apps/`.
-Add further CLJ or CLJS libraries with `mono add lib`.
-The default `mixed` template generates the app-and-library example.
+Add local coordinates to root `:dev` for workspace REPL access.
+Consumers reference sibling libraries through their own `deps.edn`:
 
-## Workspace layout
+```clojure
+{:deps {acme.my-project/shared {:local/root "../../libs/shared"}}}
+```
+
+Module templates omit their own build files; the workspace build handles them.
+The same templates can be loaded through a pinned Git dependency with an installed deps-new tool.
+Use a full commit SHA of a revision containing these templates.
+
+## Generated workspace
 
 ```text
-apps/example-app/{src,test,resources,deps.edn,README.md}
-libs/example-lib/{src,test,resources,deps.edn,README.md}
-bb.edn
+apps/example-app/{src,test,resources,deps.edn}
+libs/example-lib/{src,test,resources,deps.edn}
 build.clj
 deps.edn
-monorepo.edn
 README.md
 ```
 
-The root manifest registers module paths and build settings. Each module owns its standard `deps.edn`.
-Apps are optional. Library-only workspaces keep their modules under `libs/` and use the same build, test, deploy, and REPL commands.
-CLJ modules include a standalone test runner under `dev/`.
-CLJS modules include either `shadow-cljs.edn` or plain compiler configurations.
+The `libs` layout omits `apps/`. Each module owns its runtime and test dependencies.
+The root build file contains ordinary functions and a Clojure map of modules, following the approach used by [fx](https://github.com/lambdaseq/fx/blob/main/build.clj).
 
-Root `build.clj` stays editable and exports `build`, `test`, `clean`, and `deploy`:
+## Build functions
 
-```sh
-clojure -T:build test
-clojure -T:build build :module '["apps/example-app"]'
-```
+Run functions from the generated workspace root with `clojure -T:build FUNCTION`.
 
-These functions accept `:module` as a path string or sequence of paths.
-Their default workspace root is the working directory; programmatic callers can supply `:root`.
-
-### Local dependencies and artifacts
-
-Reference sibling libraries using standard relative dependencies:
-
-```clojure
-{:deps {acme/shared {:local/root "../../libs/shared"}}}
-```
-
-CLJ apps produce executable uberjars. Libraries produce source jars, including CLJS libraries.
-Browser apps produce static files under `target/public/`.
-Artifacts remain under each module's `target/` directory.
-
-The runtime does not sort dependencies, cache builds, or calculate affected modules.
-Jars are local build artifacts. Remote library publication and translation of local dependencies into published coordinates require custom build logic.
-
-### Deployment
-
-Set a module's `:deploy` to an argument vector in `monorepo.edn`:
-
-```clojure
-:deploy ["./deploy.sh" "production"]
-```
-
-The command runs from that module's directory and inherits the environment.
-Arguments are passed directly; shell expansion requires an explicit shell command.
-Deployment requires module selection and has no built-in hosting provider.
-Make deployment commands safe to rerun by replacing or merging shared state.
-
-### REPLs
-
-Sessions bind to loopback and write module-local `.nrepl-port` files for IDEs.
-Connection details and logs appear in `bb mono repl status`.
-Runtime state lives under ignored `.mono/` directories.
-
-CLJ sessions expose nREPL. Shadow browser sessions also watch the app build.
-Connect to nREPL, evaluate `(shadow.cljs.devtools.api/repl :app)`, and open the reported browser URL.
-For Shadow libraries, evaluate `(shadow.cljs.devtools.api/node-repl)`.
-For plain CLJS, evaluate `(cider.piggieback/cljs-repl (cljs.repl.browser/repl-env))` and open its browser URL.
-Server readiness and browser attachment are separate states.
-
-Starts are serialized and reuse healthy sessions. Authenticated control sockets identify managed processes.
-Stops never signal an unverified PID. Stale session records are removed without killing unrelated processes.
-
-## Runtime versioning
-
-The remote installation above generates workspaces pinned to `lambdaseq/mono` and the installed commit.
-From a Git checkout with an origin, scaffolding uses its URL and full HEAD commit.
-For an explicit release, supply both coordinates:
+| Function | Behavior |
+| --- | --- |
+| `test` | Run module test aliases, then execute CLJS tests in Node. |
+| `jar` | Build library source jars. |
+| `uber` | Build executable CLJ application jars. |
+| `build` | Build libraries, CLJ applications, and CLJS browser releases. |
+| `clean` | Delete selected module target directories. |
+| `install` | Build and install libraries into the local Maven repository. |
+| `deploy` | Build and publish explicitly selected libraries to Clojars. |
+| `run` | Run one CLJ application from source. |
+| `repl` | Run one module's foreground REPL alias. |
+| `version` | Print the workspace version. |
+| `ci` | Test and build selected modules. |
 
 ```sh
-mono init my-project --namespace acme \
-  --runtime-url git@github.com:lambdaseq/mono.git \
-  --runtime-sha 2ec9233af83e23ed35a8ed839f80a90d16fc53a2
+clojure -T:build test :modules '[:example-lib]'
+clojure -T:build jar :version '"0.2.0"'
+clojure -T:build repl :modules :example-lib
 ```
 
-Use a full commit SHA when selecting a different version.
-Both generated runtime dependencies use the same coordinates.
+Tasks default to all supported modules. Explicit selections of unsupported modules fail.
+Execution is sequential without dependency scheduling. Build artifacts stay in module-local `target/` directories.
 
-Without Git coordinates, scaffolding uses this checkout through an absolute `:local/root` dependency.
-This development mode requires the checkout to remain available.
-Supply release coordinates when generating a workspace to share or clone elsewhere.
-Template upgrades and third-party template plugins are deferred.
+The generated `project` map defines the default version and publication metadata.
+Module versions can override that default; command-line `:version` overrides both. Snapshots are rejected.
+Library POMs replace registered internal local dependencies with Maven coordinates and versions.
+Unregistered local dependencies and direct Git dependencies fail library packaging instead of being omitted from POMs.
+Dependency files stay unchanged. `install` supports `:local-repo` for a separate Maven destination.
 
-## Development
+Configure URL and license metadata before publishing. `deploy` requires explicit modules and uses your Clojars credentials.
+Application deployment belongs in project-specific build functions.
 
-Clone the repository to run from source:
+## REPLs
+
+Use `clojure -M:dev` for a JVM REPL spanning the workspace.
+Use `clojure -T:build repl :modules :example-lib` for a module's foreground alias; stop it with Ctrl-C.
+CLJ modules provide standard nREPL aliases for IDE connections.
+Shadow browser apps use watch mode. Shadow libraries use Node REPLs.
+Plain CLJS aliases use the browser REPL for apps and Node REPLs for libraries.
+
+## Migration from the CLI
+
+The standalone executable, bbin integration, prompts, runtime manifest, and managed background REPL sessions were removed.
+Use deps-new templates for creation and `clojure -T:build` for project tasks.
+Existing CLI-generated repositories retain their pinned runtime dependency until migrated explicitly.
+Generated build files belong to their projects; template updates are adopted by copying the desired changes.
+
+## Template development
 
 ```sh
-git clone git@github.com:lambdaseq/mono.git
-cd mono
-./bin/mono --help
-```
-
-Install that checkout with `bbin install . --as mono`, or use `./bin/mono` directly.
-
-```sh
-bb test
-bb lint
 clojure -M:test
-bb integration
-clojure -T:build jar
+clojure -M:integration
+clojure -T:build ci
+clj-kondo --lint src test integration build.clj
 ```
 
-Unit tests cover validation, selection, templates, file collisions, path containment, and stale sessions.
-`bb integration` builds temporary workspaces, checks failure exits and deploy hooks, and exercises JVM and CLJS REPLs.
-It downloads compiler dependencies and opens loopback sockets.
-Dependency pins and their publication dates are recorded in [docs/dependencies.md](docs/dependencies.md).
+Tests generate workspaces through deps-new. Acceptance checks cover both layouts, executable jars, failure propagation, portable library POMs, local installation, and CLJS builds.
+Remote publication is exercised only by an explicit `deploy` invocation in a generated project.
+Dependency pins and publication dates are recorded in [docs/dependencies.md](docs/dependencies.md).

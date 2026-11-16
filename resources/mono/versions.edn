@@ -1,6 +1,0 @@
-{:clojure "1.12.4"
- :tools-build "0.10.6"
- :clojurescript "1.12.145"
- :shadow-cljs "3.4.11"
- :nrepl "1.3.0"
- :piggieback "0.6.0"}

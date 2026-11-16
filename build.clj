@@ -1,12 +1,16 @@
 (ns build
   (:refer-clojure :exclude [test])
-  (:require [clojure.tools.build.api :as b]
-            [mono.process :as process]))
+  (:require [clojure.tools.build.api :as b]))
 
-(defn test [_]
-  (process/run-command "." ["clojure" "-M:test"]))
+(defn test "Test the deps-new templates." [opts]
+  (let [result (b/process {:command-args ["clojure" "-M:test"]})]
+    (when-not (zero? (:exit result))
+      (throw (ex-info "Template tests failed." result))))
+  opts)
 
-(defn jar [_]
-  (b/delete {:path "target"})
-  (b/copy-dir {:src-dirs ["src" "resources"] :target-dir "target/classes"})
-  (b/jar {:class-dir "target/classes" :jar-file "target/mono.jar"}))
+(defn ci "Verify templates and generated workspaces." [opts]
+  (test opts)
+  (let [result (b/process {:command-args ["clojure" "-M:integration"]})]
+    (when-not (zero? (:exit result))
+      (throw (ex-info "Generated workspace checks failed." result))))
+  opts)

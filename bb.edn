@@ -1,8 +1,0 @@
-{:paths ["src" "resources"]
- :min-bb-version "1.12.0"
- :bbin/bin {mono {:main-opts ["-m" "mono.cli"]}}
- :tasks {:requires ([mono.process :as process])
-         mono {:task (apply (requiring-resolve 'mono.cli/-main) *command-line-args*)}
-         test {:extra-paths ["test"] :task (exec 'mono.test-runner/run)}
-         lint {:task (process/run-command "." ["clj-kondo" "--lint" "src" "test" "build.clj"])}
-         integration {:extra-paths ["test"] :task (apply (requiring-resolve 'mono.integration-test/-main) *command-line-args*)}}}

@@ -1,0 +1,2 @@
+{:target :nodejs :main {{namespace}}.test-runner
+ :output-to "target/tests.js" :output-dir "target/test-out" :optimizations :none}

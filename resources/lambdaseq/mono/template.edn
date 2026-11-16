@@ -1,0 +1,3 @@
+{:description "A self-contained Clojure workspace."
+ :data-fn mono.template/create-workspace-data
+ :template-fn mono.template/configure-workspace-template}
