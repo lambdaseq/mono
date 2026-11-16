@@ -1,0 +1,10 @@
+.cpcache/
+.clj-kondo/.cache/
+.clj-kondo/.persist/
+.idea/
+*.iml
+.nrepl-port
+.shadow-cljs/
+.mono/
+target/
+node_modules/

@@ -1,0 +1,6 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.4"}}
+ :aliases
+ {:build {:extra-deps {io.github.clojure/tools.build {:mvn/version "0.10.6"}}
+          :extra-paths ["." "src" "resources"] :ns-default build}
+  :test {:extra-paths ["test"] :main-opts ["-m" "mono.test-runner"]}}}
