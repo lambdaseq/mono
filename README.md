@@ -2,70 +2,57 @@
 
 Generate Clojure monorepos with independent apps and libraries. Build, test, deploy, and manage module REPLs from the workspace root.
 
-Requires Babashka 1.12+, Clojure CLI, and JDK 17+. CLJS tests and Node REPLs require Node.js.
 Supports macOS and Linux.
 
 ## Quickstart
 
-Run directly from this checkout:
+### Prerequisites
+
+Install these tools and configure GitHub SSH access:
+
+| Tool | Version |
+| --- | --- |
+| Babashka | 1.13.220+ for the bbin installer below |
+| [bbin](https://github.com/babashka/bbin) | 0.2.5 |
+| Clojure CLI | 1.12.6.1673 |
+| JDK | 17+ for CLJ; 21+ for CLJS |
+| Git | 2.x |
+| Node.js | 24.x, for CLJS tests and Node REPLs |
+
+### Setup
+
+Install the published commit:
 
 ```sh
-./bin/mono init /tmp/my-project --namespace acme
-cd /tmp/my-project
+bbin install git@github.com:lambdaseq/mono.git \
+  --git/sha 2ec9233af83e23ed35a8ed839f80a90d16fc53a2 --as mono
+mono --help
+```
+
+Ensure the directory printed by `bbin bin` is on your `PATH`.
+
+### Run
+
+Create an app-and-library workspace, test it, and build the app:
+
+```sh
+mono init my-project --namespace acme
+cd my-project
 bb mono test
 bb mono build --module apps/example-app
 java -jar apps/example-app/target/example-app-0.1.0.jar
 ```
 
-Install the checkout with [bbin](https://github.com/babashka/bbin):
+### Verify it worked
 
-```sh
-bbin install . --as mono
-mono --help
-```
+Tests report zero failures and errors. Running the jar prints `Hello, world!`.
+Use `bb mono` inside the workspace to load its pinned runtime version.
 
-Run `mono init` without arguments in a terminal to open the wizard.
-It asks for the project directory, namespace prefix, and starter: `mixed` or `libs`.
-Press Enter at the starter prompt to choose `mixed`.
-Invalid answers are retried. Ctrl-D or Ctrl-C cancels before generation.
+### Troubleshooting
 
-Explicit arguments skip the wizard, including in terminals.
-Without a terminal, missing arguments show usage and return a nonzero exit code.
-
-Init requires an empty or absent directory. Module generation refuses existing destinations.
-
-Use `bb mono` inside generated workspaces. It loads the repository's runtime version.
-The global `mono` command delegates to that version when used inside a workspace.
-
-Run `bb mono add app` or `bb mono add lib` in a terminal to open a module wizard.
-It asks for a name and platform: CLJ or CLJS. CLJ is the default.
-CLJS selections also ask whether to use Shadow CLJS, defaulting to yes.
-Existing module names are rejected before generation. Cancellation leaves the workspace unchanged.
-
-Supplying a name skips module prompts in every environment:
-
-```sh
-bb mono add app api --platform clj
-bb mono add lib shared --platform cljs --compiler shadow
-bb mono add app web --platform cljs --compiler cljs
-```
-
-With an explicit name, omitted flags retain their defaults: CLJ, or Shadow when the platform is CLJS.
-Without a terminal, a missing name shows usage and returns a nonzero exit code.
-
-For a library-only repository:
-
-```sh
-mono init my-libraries --namespace acme --template libs
-cd my-libraries
-bb mono test
-bb mono build
-bb mono repl start --module libs/example-lib
-```
-
-The `libs` template generates a CLJ library and omits `apps/`.
-Add further CLJ or CLJS libraries with `mono add lib`.
-The default `mixed` template generates the app-and-library example.
+- **`mono: command not found`:** add the directory printed by `bbin bin` to your `PATH`.
+- **GitHub access fails:** configure an SSH key with repository access, then retry installation.
+- **Destination exists:** choose an empty or absent directory; generators refuse overwrites.
 
 ## Commands
 
@@ -92,6 +79,48 @@ The default `mixed` template generates the app-and-library example.
 Repeat `--module` to select several modules. Commands run sequentially in manifest order and stop on failure.
 REPL start and stop accept exactly one module. Start accepts `--port` and `--timeout`; defaults are an automatic port and 120 seconds.
 Commands work from nested workspace directories.
+
+## Interactive generation
+
+Run `mono init` without arguments in a terminal to open the wizard.
+It asks for the project directory, namespace prefix, and starter: `mixed` or `libs`.
+Press Enter at the starter prompt to choose `mixed`.
+Invalid answers are retried. Ctrl-D or Ctrl-C cancels before generation.
+
+Explicit arguments skip the wizard, including in terminals.
+Without a terminal, missing arguments show usage and return a nonzero exit code.
+
+The global `mono` command delegates to the workspace's pinned runtime when used inside a workspace.
+
+Run `bb mono add app` or `bb mono add lib` in a terminal to open a module wizard.
+It asks for a name and platform: CLJ or CLJS. CLJ is the default.
+CLJS selections also ask whether to use Shadow CLJS, defaulting to yes.
+Existing module names are rejected before generation. Cancellation leaves the workspace unchanged.
+
+Supplying a name skips module prompts in every environment:
+
+```sh
+bb mono add app api --platform clj
+bb mono add lib shared --platform cljs --compiler shadow
+bb mono add app web --platform cljs --compiler cljs
+```
+
+With an explicit name, omitted flags retain their defaults: CLJ, or Shadow when the platform is CLJS.
+Without a terminal, a missing name shows usage and returns a nonzero exit code.
+
+## Library-only repositories
+
+```sh
+mono init my-libraries --namespace acme --template libs
+cd my-libraries
+bb mono test
+bb mono build
+bb mono repl start --module libs/example-lib
+```
+
+The `libs` template generates a CLJ library and omits `apps/`.
+Add further CLJ or CLJS libraries with `mono add lib`.
+The default `mixed` template generates the app-and-library example.
 
 ## Workspace layout
 
@@ -165,16 +194,17 @@ Stops never signal an unverified PID. Stale session records are removed without 
 
 ## Runtime versioning
 
-When run from a Git checkout with an origin, scaffolding uses its URL and full HEAD commit.
+The remote installation above generates workspaces pinned to `lambdaseq/mono` and the installed commit.
+From a Git checkout with an origin, scaffolding uses its URL and full HEAD commit.
 For an explicit release, supply both coordinates:
 
 ```sh
 mono init my-project --namespace acme \
-  --runtime-url https://example.com/your-org/mono.git \
-  --runtime-sha FULL_40_CHARACTER_COMMIT
+  --runtime-url git@github.com:lambdaseq/mono.git \
+  --runtime-sha 2ec9233af83e23ed35a8ed839f80a90d16fc53a2
 ```
 
-Replace the example URL and commit with a reachable repository containing this tool.
+Use a full commit SHA when selecting a different version.
 Both generated runtime dependencies use the same coordinates.
 
 Without Git coordinates, scaffolding uses this checkout through an absolute `:local/root` dependency.
@@ -183,6 +213,16 @@ Supply release coordinates when generating a workspace to share or clone elsewhe
 Template upgrades and third-party template plugins are deferred.
 
 ## Development
+
+Clone the repository to run from source:
+
+```sh
+git clone git@github.com:lambdaseq/mono.git
+cd mono
+./bin/mono --help
+```
+
+Install that checkout with `bbin install . --as mono`, or use `./bin/mono` directly.
 
 ```sh
 bb test
