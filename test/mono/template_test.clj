@@ -18,7 +18,10 @@
 
 (defn generate [root directory opts]
   (let [target (io/file root directory)]
-    (new/create (assoc opts :target-dir (str target)))
+    ;; A non-Git prefix keeps template tests on the local classpath.
+    (new/create (-> opts
+                    (assoc :target-dir (str target))
+                    (update :template #(symbol (str "local%" %)))))
     target))
 
 (defn read-edn [file]
@@ -27,7 +30,7 @@
 (test/deftest validates-template-options-before-copying
   (with-directory
     (fn [root]
-      (doseq [opts [{:template 'lambdaseq/mono :name 'acme/demo :layout :unknown}
+      (doseq [opts [{:template 'io.github.lambdaseq/mono :name 'acme/demo :layout :unknown}
                     {:template 'lambdaseq/app :name 'acme/demo :platform :python}
                     {:template 'lambdaseq/lib :name 'acme/demo :platform :clj :compiler :shadow}
                     {:template 'lambdaseq/lib :name 'acme/demo :platform :cljs :compiler :unknown}
@@ -39,7 +42,7 @@
   (with-directory
     (fn [root]
       (doseq [layout [:mixed :libs]]
-        (let [target (generate root (name layout) {:template 'lambdaseq/mono :name 'my-org/my-project :layout layout})
+        (let [target (generate root (name layout) {:template 'io.github.lambdaseq/mono :name 'my-org/my-project :layout layout})
               deps (read-edn (io/file target "deps.edn"))
               build (slurp (io/file target "build.clj"))]
           (test/is (.isFile (io/file target "libs/example-lib/src/my_org/my_project/example_lib/core.clj")))
@@ -55,7 +58,7 @@
           (test/is (every? #(not (str/includes? (slurp %) "{{"))
                            (filter #(.isFile %) (file-seq target))))
           (test/is (thrown? Exception (generate root (name layout)
-                                                {:template 'lambdaseq/mono :name 'acme/other}))))))))
+                                                {:template 'io.github.lambdaseq/mono :name 'acme/other}))))))))
 
 (test/deftest generates-clj-and-cljs-modules
   (with-directory
@@ -88,7 +91,7 @@
 (test/deftest generated-build-preserves-publication-dependency-semantics
   (with-directory
     (fn [root]
-      (let [target (generate root "workspace" {:template 'lambdaseq/mono :name 'acme/demo :layout :libs})
+      (let [target (generate root "workspace" {:template 'io.github.lambdaseq/mono :name 'acme/demo :layout :libs})
             namespace (symbol (str "generated-build-" (random-uuid)))
             source (str/replace-first (slurp (io/file target "build.clj")) "(ns build" (str "(ns " namespace))]
         (try

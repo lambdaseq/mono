@@ -29,7 +29,7 @@
 (test/deftest mixed-workspace-builds-without-a-template-runtime
   (support/with-directory
     (fn [root]
-      (let [workspace (support/generate root "workspace" {:template 'lambdaseq/mono :name 'acme/workspace})]
+      (let [workspace (support/generate root "workspace" {:template 'io.github.lambdaseq/mono :name 'acme/workspace})]
         (check-command workspace ["clojure" "-T:build" "ci"])
         (test/is (str/includes? (:output (check-command workspace ["java" "-jar" "apps/example-app/target/example-app-0.1.0.jar"]))
                                 "Hello, world!"))
@@ -50,7 +50,7 @@
 (test/deftest library-workspace-installs-portable-dependent-jars
   (support/with-directory
     (fn [root]
-      (let [workspace (support/generate root "workspace" {:template 'lambdaseq/mono :name 'acme/libraries :layout :libs})
+      (let [workspace (support/generate root "workspace" {:template 'io.github.lambdaseq/mono :name 'acme/libraries :layout :libs})
             consumer (support/generate workspace "libs/consumer" {:template 'lambdaseq/lib :name 'acme/consumer})
             repo (io/file root "maven")
             consumer-deps (io/file consumer "deps.edn")]
@@ -84,7 +84,7 @@
 (test/deftest cljs-modules-use-both-compiler-backends
   (support/with-directory
     (fn [root]
-      (let [workspace (support/generate root "workspace" {:template 'lambdaseq/mono :name 'acme/js-workspace :layout :libs})
+      (let [workspace (support/generate root "workspace" {:template 'io.github.lambdaseq/mono :name 'acme/js-workspace :layout :libs})
             ids [:web-shadow :web-plain :shared-shadow :shared-plain]]
         (doseq [[id kind compiler] [[:web-shadow :app :shadow] [:web-plain :app :cljs]
                                     [:shared-shadow :lib :shadow] [:shared-plain :lib :cljs]]]

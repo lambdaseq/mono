@@ -26,23 +26,19 @@ clojure -Ttools install io.github.seancorfield/deps-new \
   :as new
 ```
 
-Define the pinned template dependency in each shell where you generate projects:
-
-```sh
-MONO_TEMPLATES='{:deps {io.github.lambdaseq/mono {:git/url "git@github.com:lambdaseq/mono.git" :git/sha "1242afe2833ef996ba68d4286b0ac908683af5fd"}}}'
-```
-
-Configure GitHub SSH access for this URL. Clojure fetches the revision into its Git cache; a manual checkout is unnecessary.
-
 From the directory that should contain your project, generate a workspace:
 
 ```sh
-clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
-  :template lambdaseq/mono :name acme/my-project
+clojure -Tnew create \
+  :template io.github.lambdaseq/mono \
+  :name acme/my-project
 ```
 
 This creates `my-project` with an example app that uses an example library.
-Both deps-new and mono are pinned to full commit SHAs. Generated projects own their build code and dependencies.
+deps-new is pinned to a full commit SHA. The template command follows mono's default GitHub branch.
+The workspace template name matches its GitHub repository, so no `%` path is needed.
+deps-new fetches it over HTTPS into Clojure's Git cache. No shell variables or manual checkout are needed.
+Generated projects own their build code and dependencies.
 
 ### Run
 
@@ -61,13 +57,13 @@ Builds load only dependencies declared in the generated workspace; mono and deps
 
 - **Destination exists:** choose another directory; deps-new refuses to overwrite it by default.
 - **Unknown module:** register its keyword and settings in the generated `build.clj` modules map.
-- **GitHub access fails:** configure an SSH key with repository access, then retry generation.
+- **GitHub access fails:** check `git ls-remote https://github.com/lambdaseq/mono.git` and your Git HTTPS configuration.
 
 ## Templates
 
 | Template | Result | Options |
 | --- | --- | --- |
-| `lambdaseq/mono` | Workspace with a library and optional example app | `:layout :mixed` (default) or `:libs` |
+| `io.github.lambdaseq/mono` | Workspace with a library and optional example app | `:layout :mixed` (default) or `:libs` |
 | `lambdaseq/app` | Application module | `:platform :clj` (default) or `:cljs` |
 | `lambdaseq/lib` | Library module | `:platform :clj` (default) or `:cljs` |
 
@@ -77,34 +73,38 @@ The compiler option applies only to CLJS. Names follow ordinary qualified Clojur
 To create a separate library-only workspace, run from its intended parent directory:
 
 ```sh
-clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
-  :template lambdaseq/mono :name acme/my-libraries :layout :libs
+clojure -Tnew create \
+  :template io.github.lambdaseq/mono \
+  :name acme/my-libraries :layout :libs
 ```
 
-From a generated workspace root, add modules using the same shell variable:
+From a generated workspace root, add modules:
 
 ```sh
 # CLJ library
-clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
-  :template lambdaseq/lib :name acme.my-project/shared :target-dir '"libs/shared"'
+clojure -Tnew create \
+  :template io.github.lambdaseq/mono%lambdaseq/lib \
+  :name acme.my-project/shared :target-dir '"libs/shared"'
 
 # CLJ application
-clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
-  :template lambdaseq/app :name acme.my-project/api :target-dir '"apps/api"'
+clojure -Tnew create \
+  :template io.github.lambdaseq/mono%lambdaseq/app \
+  :name acme.my-project/api :target-dir '"apps/api"'
 
 # CLJS browser application with Shadow CLJS
-clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
-  :template lambdaseq/app :name acme.my-project/web :target-dir '"apps/web"' \
+clojure -Tnew create \
+  :template io.github.lambdaseq/mono%lambdaseq/app \
+  :name acme.my-project/web :target-dir '"apps/web"' \
   :platform :cljs :compiler :shadow
 
 # CLJS library with the plain compiler
-clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
-  :template lambdaseq/lib :name acme.my-project/shared-ui :target-dir '"libs/shared-ui"' \
+clojure -Tnew create \
+  :template io.github.lambdaseq/mono%lambdaseq/lib \
+  :name acme.my-project/shared-ui :target-dir '"libs/shared-ui"' \
   :platform :cljs :compiler :cljs
 ```
 
-These commands use the installed `new` tool, not a project-specific alias.
-If you open another shell, define `MONO_TEMPLATES` again before generating modules.
+These commands use the installed `new` tool and work across shells without project-specific aliases.
 
 Register each module in the generated workspace's quoted `modules` map:
 
@@ -126,7 +126,8 @@ Consumers reference sibling libraries through their own `deps.edn`:
 ```
 
 Module templates omit their own build files; the workspace build handles them.
-To use another template revision, replace `:git/sha` in `MONO_TEMPLATES` with its full commit SHA.
+Module commands use `%` to select a template within the same GitHub repository.
+For repeatable generation, append `#` and a full 40-character commit SHA to any template argument.
 Templates are distributed through GitHub; no Maven or Clojars publication is required.
 
 ## Generated workspace
@@ -200,8 +201,10 @@ For local changes, clone the repository and use its `:new` alias:
 ```sh
 git clone git@github.com:lambdaseq/mono.git
 cd mono
-clojure -X:new :template lambdaseq/mono :name acme/local-example
+clojure -X:new :template local%io.github.lambdaseq/mono :name acme/local-example
 ```
+
+The `local%` prefix selects the template on the local classpath without fetching GitHub.
 
 ```sh
 clojure -M:test
