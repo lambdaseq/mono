@@ -30,12 +30,14 @@
 (test/deftest validates-template-options-before-copying
   (with-directory
     (fn [root]
-      (doseq [opts [{:template 'io.github.lambdaseq/mono :name 'acme/demo :layout :unknown}
-                    {:template 'lambdaseq/app :name 'acme/demo :platform :python}
-                    {:template 'lambdaseq/lib :name 'acme/demo :platform :clj :compiler :shadow}
-                    {:template 'lambdaseq/lib :name 'acme/demo :platform :cljs :compiler :unknown}
-                    {:template 'lambdaseq/lib :name 'Acme/demo}]]
-        (test/is (thrown? Exception (generate root "invalid" opts)))
+      (doseq [opts [{:layout :unknown}
+                    {:kind :unknown}
+                    {:kind :app :platform :python}
+                    {:kind :lib :platform :clj :compiler :shadow}
+                    {:kind :lib :platform :cljs :compiler :unknown}
+                    {:kind :lib :name 'Acme/demo}]]
+        (test/is (thrown? Exception (generate root "invalid"
+                                              (merge {:template 'io.github.lambdaseq/mono :name 'acme/demo} opts))))
         (test/is (not (.exists (io/file root "invalid"))))))))
 
 (test/deftest generates-self-contained-workspaces
@@ -63,16 +65,18 @@
 (test/deftest generates-clj-and-cljs-modules
   (with-directory
     (fn [root]
-      (doseq [kind ['lambdaseq/app 'lambdaseq/lib]
+      (doseq [kind [:app :lib]
               [platform compiler] [[:clj nil] [:cljs :shadow] [:cljs :cljs]]]
         (let [directory (str (name kind) "-" (name platform) "-" (or (some-> compiler name) "default"))
-              target (generate root directory (cond-> {:template kind :name 'acme/some-module :platform platform}
+              target (generate root directory (cond-> {:template 'io.github.lambdaseq/mono :kind kind
+                                                       :name 'acme/some-module :platform platform}
                                                 compiler (assoc :compiler compiler)))
               extension (if (= platform :clj) "clj" "cljs")
               deps (read-edn (io/file target "deps.edn"))]
           (test/is (.isFile (io/file target (str "src/acme/some_module/core." extension))))
           (test/is (.isFile (io/file target (str "test/acme/some_module/core_test." extension))))
           (test/is (not (.exists (io/file target "build.clj"))))
+          (test/is (not (.exists (io/file target "libs/example-lib"))))
           (test/is (not (.exists (io/file target (str "core." extension)))))
           (test/is (not (.exists (io/file target (str "src/acme/some_module/core_test." extension)))))
           (test/is (= ["src" "resources"] (:paths deps)))
@@ -83,10 +87,13 @@
           (test/is (every? #(not (str/includes? (slurp %) "{{"))
                            (filter #(.isFile %) (file-seq target)))))))))
 
-(test/deftest defaults-to-clj-and-shadow-for-cljs
-  (test/is (= "clj" (:platform (template/create-app-data {:top "acme" :main "demo"}))))
-  (test/is (nil? (:compiler (template/create-lib-data {:top "acme" :main "demo"}))))
-  (test/is (= "shadow" (:compiler (template/create-lib-data {:top "acme" :main "demo" :platform :cljs})))))
+(test/deftest defaults-to-workspace-clj-and-shadow-for-cljs
+  (let [opts {:top "acme" :main "demo"}]
+    (test/is (= (template/create-template-data opts)
+                (template/create-template-data (assoc opts :kind :workspace))))
+    (test/is (= "clj" (:platform (template/create-template-data (assoc opts :kind :app)))))
+    (test/is (nil? (:compiler (template/create-template-data (assoc opts :kind :lib)))))
+    (test/is (= "shadow" (:compiler (template/create-template-data (assoc opts :kind :lib :platform :cljs)))))))
 
 (test/deftest generated-build-preserves-publication-dependency-semantics
   (with-directory

@@ -51,7 +51,7 @@
   (support/with-directory
     (fn [root]
       (let [workspace (support/generate root "workspace" {:template 'io.github.lambdaseq/mono :name 'acme/libraries :layout :libs})
-            consumer (support/generate workspace "libs/consumer" {:template 'lambdaseq/lib :name 'acme/consumer})
+            consumer (support/generate workspace "libs/consumer" {:template 'io.github.lambdaseq/mono :kind :lib :name 'acme/consumer})
             repo (io/file root "maven")
             consumer-deps (io/file consumer "deps.edn")]
         (save-edn consumer-deps (assoc-in (support/read-edn consumer-deps)
@@ -90,7 +90,7 @@
                                     [:shared-shadow :lib :shadow] [:shared-plain :lib :cljs]]]
           (let [directory (str (if (= kind :app) "apps/" "libs/") (name id))
                 module-name (symbol "acme" (name id))]
-            (support/generate workspace directory {:template (symbol "lambdaseq" (name kind)) :name module-name
+            (support/generate workspace directory {:template 'io.github.lambdaseq/mono :kind kind :name module-name
                                                    :platform :cljs :compiler compiler})
             (register-module workspace id (cond-> {:kind kind :dir directory :platform :cljs
                                                    :compiler compiler :lib module-name}

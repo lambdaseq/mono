@@ -59,10 +59,6 @@
      :init-script (if (= :cljs compiler) (str "<script>" (str/replace namespace "-" "_") ".core.init();</script>") "")
      :module-deps (format-edn (create-module-deps namespace kind platform compiler))}))
 
-;; deps-new requires distinct data hooks for the two public module templates.
-(defn create-app-data [opts] (create-module-data opts :app))
-(defn create-lib-data [opts] (create-module-data opts :lib))
-
 (defn configure-module-template [template {:keys [kind platform compiler]}]
   (let [extension (if (= "clj" platform) "clj" "cljs")]
     (assoc template :transform
@@ -86,7 +82,7 @@
                     'slipset/deps-deploy {:mvn/version "0.2.2"}}
         deps {:paths [] :aliases {:build {:deps build-deps :ns-default 'build}
                                   :dev {:extra-deps (into {} (map (fn [[_ module]] [(:lib module) {:local/root (:dir module)}])) modules)}}}]
-    {:prefix prefix :layout (name layout) :workspace-modules (str/replace (format-edn modules) "\n" "\n   ") :workspace-deps (format-edn deps)
+    {:kind "workspace" :prefix prefix :layout (name layout) :workspace-modules (str/replace (format-edn modules) "\n" "\n   ") :workspace-deps (format-edn deps)
      :lib-deps (format-edn (create-module-deps (str prefix ".example-lib") :lib :clj nil))
      :app-deps (format-edn (assoc-in (create-module-deps (str prefix ".example-app") :app :clj nil)
                                      [:deps lib] {:local/root "../../libs/example-lib"}))
@@ -94,6 +90,12 @@
      :artifact-command (if (= :mixed layout)
                          "java -jar apps/example-app/target/example-app-0.1.0.jar"
                          "jar tf libs/example-lib/target/example-lib-0.1.0.jar")}))
+
+(defn create-template-data [opts]
+  (case (validate-choice (get opts :kind :workspace) #{:workspace :app :lib} :kind)
+    :workspace (create-workspace-data opts)
+    :app (create-module-data opts :app)
+    :lib (create-module-data opts :lib)))
 
 (defn configure-workspace-template [template {:keys [layout]}]
   (assoc template :transform
@@ -106,3 +108,13 @@
                   ["app" "apps/example-app/src/{{prefix/file}}/example_app" {"core.clj" "core.clj"} :only]
                   ["app" "apps/example-app/test/{{prefix/file}}/example_app" {"core_test.clj" "core_test.clj"} :only]
                   ["app/resources" "apps/example-app/resources" {}]]))))
+
+(defn configure-template [template {:keys [kind] :as data}]
+  (let [configured (if (= "workspace" kind)
+                     (configure-workspace-template template data)
+                     (configure-module-template template data))]
+    (-> configured
+        (assoc :root (str kind "/root"))
+        (update :transform
+                (fn [transforms]
+                  (mapv #(update % 0 (fn [source] (str kind "/" source))) transforms))))))

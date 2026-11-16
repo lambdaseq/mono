@@ -59,13 +59,15 @@ Builds load only dependencies declared in the generated workspace; mono and deps
 - **Unknown module:** register its keyword and settings in the generated `build.clj` modules map.
 - **GitHub access fails:** check `git ls-remote https://github.com/lambdaseq/mono.git` and your Git HTTPS configuration.
 
-## Templates
+## Template options
 
-| Template | Result | Options |
+Use `io.github.lambdaseq/mono` for all generation. Select the output with `:kind`:
+
+| Kind | Result | Options |
 | --- | --- | --- |
-| `io.github.lambdaseq/mono` | Workspace with a library and optional example app | `:layout :mixed` (default) or `:libs` |
-| `lambdaseq/app` | Application module | `:platform :clj` (default) or `:cljs` |
-| `lambdaseq/lib` | Library module | `:platform :clj` (default) or `:cljs` |
+| `:workspace` (default) | Workspace with a library and optional example app | `:layout :mixed` (default) or `:libs` |
+| `:app` | Application module | `:platform :clj` (default) or `:cljs` |
+| `:lib` | Library module | `:platform :clj` (default) or `:cljs` |
 
 CLJS modules use `:compiler :shadow` by default. Choose `:compiler :cljs` for the plain compiler.
 The compiler option applies only to CLJS. Names follow ordinary qualified Clojure names, such as `acme.my-project/shared`.
@@ -83,23 +85,23 @@ From a generated workspace root, add modules:
 ```sh
 # CLJ library
 clojure -Tnew create \
-  :template io.github.lambdaseq/mono%lambdaseq/lib \
+  :template io.github.lambdaseq/mono :kind :lib \
   :name acme.my-project/shared :target-dir '"libs/shared"'
 
 # CLJ application
 clojure -Tnew create \
-  :template io.github.lambdaseq/mono%lambdaseq/app \
+  :template io.github.lambdaseq/mono :kind :app \
   :name acme.my-project/api :target-dir '"apps/api"'
 
 # CLJS browser application with Shadow CLJS
 clojure -Tnew create \
-  :template io.github.lambdaseq/mono%lambdaseq/app \
+  :template io.github.lambdaseq/mono :kind :app \
   :name acme.my-project/web :target-dir '"apps/web"' \
   :platform :cljs :compiler :shadow
 
 # CLJS library with the plain compiler
 clojure -Tnew create \
-  :template io.github.lambdaseq/mono%lambdaseq/lib \
+  :template io.github.lambdaseq/mono :kind :lib \
   :name acme.my-project/shared-ui :target-dir '"libs/shared-ui"' \
   :platform :cljs :compiler :cljs
 ```
@@ -125,10 +127,10 @@ Consumers reference sibling libraries through their own `deps.edn`:
 {:deps {acme.my-project/shared {:local/root "../../libs/shared"}}}
 ```
 
-Module templates omit their own build files; the workspace build handles them.
-Module commands use `%` to select a template within the same GitHub repository.
-For repeatable generation, append `#` and a full 40-character commit SHA to any template argument.
-Templates are distributed through GitHub; no Maven or Clojars publication is required.
+Generated modules omit their own build files; the workspace build handles them.
+The separate `lambdaseq/app` and `lambdaseq/lib` templates are replaced by `:kind :app` and `:kind :lib`.
+For repeatable generation, append `#` and a full 40-character commit SHA to the template argument.
+The template is distributed through GitHub; no Maven or Clojars publication is required.
 
 ## Generated workspace
 
@@ -190,7 +192,7 @@ Plain CLJS aliases use the browser REPL for apps and Node REPLs for libraries.
 ## Migration from the CLI
 
 The standalone executable, bbin integration, prompts, runtime manifest, and managed background REPL sessions were removed.
-Use deps-new templates for creation and `clojure -T:build` for project tasks.
+Use mono's deps-new template for creation and `clojure -T:build` for project tasks.
 Existing CLI-generated repositories retain their pinned runtime dependency until migrated explicitly.
 Generated build files belong to their projects; template updates are adopted by copying the desired changes.
 

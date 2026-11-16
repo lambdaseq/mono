@@ -49,8 +49,18 @@ App deployment is project-specific: add an ordinary build function for your host
 
 ## Add modules
 
-Generate a module with mono's `lambdaseq/app` or `lambdaseq/lib` deps-new template, targeting `apps/NAME` or `libs/NAME`.
-Register it in the `modules` map, for example:
+Generate modules from the workspace root with `:kind :app` or `:kind :lib`:
+
+```sh
+clojure -Tnew create :template io.github.lambdaseq/mono :kind :app \
+  :name {{prefix}}/api :target-dir '"apps/api"'
+
+clojure -Tnew create :template io.github.lambdaseq/mono :kind :lib \
+  :name {{prefix}}/shared :target-dir '"libs/shared"'
+```
+
+These commands use the installed deps-new tool. See [mono's setup instructions](https://github.com/lambdaseq/mono#setup).
+Register each module in the `modules` map, for example:
 
 ```clojure
 :shared {:kind :lib :dir "libs/shared" :platform :clj :lib {{prefix}}/shared}

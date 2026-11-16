@@ -1,3 +1,0 @@
-{:description "A workspace application."
- :data-fn mono.template/create-app-data
- :template-fn mono.template/configure-module-template}

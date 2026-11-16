@@ -1,3 +1,0 @@
-{:description "A workspace library."
- :data-fn mono.template/create-lib-data
- :template-fn mono.template/configure-module-template}
