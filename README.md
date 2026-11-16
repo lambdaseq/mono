@@ -18,16 +18,31 @@ Use macOS or Linux with these tools:
 
 ### Setup
 
-Clone this repository, or use an existing checkout:
+Install the pinned deps-new tool once:
 
 ```sh
-git clone git@github.com:lambdaseq/mono.git
-cd mono
-clojure -X:new :template lambdaseq/mono :name acme/my-project
+clojure -Ttools install io.github.seancorfield/deps-new \
+  '{:git/tag "v0.10.3" :git/sha "2c012c42185f9f14448f561481e6b39088e0fc82"}' \
+  :as new
 ```
 
-The `:new` alias loads a pinned deps-new release. It creates `my-project` with an example app that uses an example library.
-For a library-only workspace, add `:layout :libs`.
+Define the pinned template dependency in each shell where you generate projects:
+
+```sh
+MONO_TEMPLATES='{:deps {io.github.lambdaseq/mono {:git/url "git@github.com:lambdaseq/mono.git" :git/sha "1242afe2833ef996ba68d4286b0ac908683af5fd"}}}'
+```
+
+Configure GitHub SSH access for this URL. Clojure fetches the revision into its Git cache; a manual checkout is unnecessary.
+
+From the directory that should contain your project, generate a workspace:
+
+```sh
+clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
+  :template lambdaseq/mono :name acme/my-project
+```
+
+This creates `my-project` with an example app that uses an example library.
+Both deps-new and mono are pinned to full commit SHAs. Generated projects own their build code and dependencies.
 
 ### Run
 
@@ -46,7 +61,7 @@ Builds load only dependencies declared in the generated workspace; mono and deps
 
 - **Destination exists:** choose another directory; deps-new refuses to overwrite it by default.
 - **Unknown module:** register its keyword and settings in the generated `build.clj` modules map.
-- **Publishing metadata missing:** configure the generated `project` URL and license before calling `deploy`.
+- **GitHub access fails:** configure an SSH key with repository access, then retry generation.
 
 ## Templates
 
@@ -59,20 +74,46 @@ Builds load only dependencies declared in the generated workspace; mono and deps
 CLJS modules use `:compiler :shadow` by default. Choose `:compiler :cljs` for the plain compiler.
 The compiler option applies only to CLJS. Names follow ordinary qualified Clojure names, such as `acme.my-project/shared`.
 
-Run these commands from the mono checkout:
+To create a separate library-only workspace, run from its intended parent directory:
 
 ```sh
-clojure -X:new :template lambdaseq/lib :name acme.my-project/shared \
-  :target-dir '"my-project/libs/shared"'
-
-clojure -X:new :template lambdaseq/app :name acme.my-project/web \
-  :target-dir '"my-project/apps/web"' :platform :cljs :compiler :shadow
+clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
+  :template lambdaseq/mono :name acme/my-libraries :layout :libs
 ```
+
+From a generated workspace root, add modules using the same shell variable:
+
+```sh
+# CLJ library
+clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
+  :template lambdaseq/lib :name acme.my-project/shared :target-dir '"libs/shared"'
+
+# CLJ application
+clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
+  :template lambdaseq/app :name acme.my-project/api :target-dir '"apps/api"'
+
+# CLJS browser application with Shadow CLJS
+clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
+  :template lambdaseq/app :name acme.my-project/web :target-dir '"apps/web"' \
+  :platform :cljs :compiler :shadow
+
+# CLJS library with the plain compiler
+clojure -Sdeps "$MONO_TEMPLATES" -Tnew create \
+  :template lambdaseq/lib :name acme.my-project/shared-ui :target-dir '"libs/shared-ui"' \
+  :platform :cljs :compiler :cljs
+```
+
+These commands use the installed `new` tool, not a project-specific alias.
+If you open another shell, define `MONO_TEMPLATES` again before generating modules.
 
 Register each module in the generated workspace's quoted `modules` map:
 
 ```clojure
 :shared {:kind :lib :dir "libs/shared" :platform :clj :lib acme.my-project/shared}
+:api {:kind :app :dir "apps/api" :platform :clj
+      :lib acme.my-project/api :main acme.my-project.api.core}
+:shared-ui {:kind :lib :dir "libs/shared-ui" :platform :cljs :compiler :cljs
+            :lib acme.my-project/shared-ui}
 :web {:kind :app :dir "apps/web" :platform :cljs :compiler :shadow
       :lib acme.my-project/web :main acme.my-project.web.core}
 ```
@@ -85,8 +126,8 @@ Consumers reference sibling libraries through their own `deps.edn`:
 ```
 
 Module templates omit their own build files; the workspace build handles them.
-The same templates can be loaded through a pinned Git dependency with an installed deps-new tool.
-Use a full commit SHA of a revision containing these templates.
+To use another template revision, replace `:git/sha` in `MONO_TEMPLATES` with its full commit SHA.
+Templates are distributed through GitHub; no Maven or Clojars publication is required.
 
 ## Generated workspace
 
@@ -153,6 +194,14 @@ Existing CLI-generated repositories retain their pinned runtime dependency until
 Generated build files belong to their projects; template updates are adopted by copying the desired changes.
 
 ## Template development
+
+For local changes, clone the repository and use its `:new` alias:
+
+```sh
+git clone git@github.com:lambdaseq/mono.git
+cd mono
+clojure -X:new :template lambdaseq/mono :name acme/local-example
+```
 
 ```sh
 clojure -M:test
