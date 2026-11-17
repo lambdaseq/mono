@@ -86,27 +86,31 @@ From a generated workspace root, add modules:
 # CLJ library
 clojure -Tnew create \
   :template io.github.lambdaseq/mono :kind :lib \
-  :name acme.my-project/shared :target-dir '"libs/shared"'
+  :name acme.my-project/shared
 
 # CLJ application
 clojure -Tnew create \
   :template io.github.lambdaseq/mono :kind :app \
-  :name acme.my-project/api :target-dir '"apps/api"'
+  :name acme.my-project/api
 
 # CLJS browser application with Shadow CLJS
 clojure -Tnew create \
   :template io.github.lambdaseq/mono :kind :app \
-  :name acme.my-project/web :target-dir '"apps/web"' \
+  :name acme.my-project/web \
   :platform :cljs :compiler :shadow
 
 # CLJS library with the plain compiler
 clojure -Tnew create \
   :template io.github.lambdaseq/mono :kind :lib \
-  :name acme.my-project/shared-ui :target-dir '"libs/shared-ui"' \
+  :name acme.my-project/shared-ui \
   :platform :cljs :compiler :cljs
 ```
 
 These commands use the installed `new` tool and work across shells without project-specific aliases.
+Apps default to `apps/NAME`; libraries default to `libs/NAME`, relative to the working directory.
+`NAME` is the part after `/` in `:name`.
+Override the destination with `:target-dir '"custom/path"'`.
+deps-new treats an explicit bare `NAME` like its default; use `:target-dir '"./NAME"'` to keep that directory outside `apps/` or `libs/`.
 
 Register each module in the generated workspace's quoted `modules` map:
 

@@ -53,13 +53,15 @@ Generate modules from the workspace root with `:kind :app` or `:kind :lib`:
 
 ```sh
 clojure -Tnew create :template io.github.lambdaseq/mono :kind :app \
-  :name {{prefix}}/api :target-dir '"apps/api"'
+  :name {{prefix}}/api
 
 clojure -Tnew create :template io.github.lambdaseq/mono :kind :lib \
-  :name {{prefix}}/shared :target-dir '"libs/shared"'
+  :name {{prefix}}/shared
 ```
 
 These commands use the installed deps-new tool. See [mono's setup instructions](https://github.com/lambdaseq/mono#setup).
+Apps default to `apps/NAME`; libraries default to `libs/NAME`.
+Override with `:target-dir '"custom/path"'`; use `:target-dir '"./NAME"'` for a sibling directory.
 Register each module in the `modules` map, for example:
 
 ```clojure

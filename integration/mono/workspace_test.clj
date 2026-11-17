@@ -26,6 +26,37 @@
         (str "\n(def modules (assoc modules " (pr-str id) " '" (pr-str module) "))\n")
         :append true))
 
+(test/deftest module-directories-default-through-the-cli
+  (let [project-deps (support/read-edn (io/file "deps.edn"))
+        cli-deps (-> project-deps
+                     (update :paths #(mapv (fn [path] (str (.getCanonicalFile (io/file path)))) %))
+                     (assoc :aliases {:new (get-in project-deps [:aliases :new])}))
+        command ["clojure" "-Sdeps" (pr-str cli-deps) "-X:new"
+                 ":template" "local%io.github.lambdaseq/mono"]]
+    (support/with-directory
+      (fn [root]
+        (doseq [[kind platform module-name target-dir expected]
+                [[:app :clj "api" nil "apps/api"]
+                 [:lib :clj "shared" nil "libs/shared"]
+                 [:app :cljs "web" nil "apps/web"]
+                 [:lib :cljs "shared-ui" nil "libs/shared-ui"]
+                 [:app :clj "named-api" "named-api" "apps/named-api"]
+                 [:app :clj "custom-api" "services/backend" "services/backend"]
+                 [:lib :clj "local-lib" "./local-lib" "local-lib"]
+                 [nil nil "workspace" nil "workspace"]]]
+          (let [args (cond-> (into command [":name" (str "acme/" module-name)])
+                       kind (into [":kind" (str kind)])
+                       platform (into [":platform" (str platform)])
+                       target-dir (into [":target-dir" (pr-str target-dir)]))
+                source (if kind
+                         (str "src/acme/" (str/replace module-name "-" "_") "/core."
+                              (if (= :clj platform) "clj" "cljs"))
+                         "build.clj")]
+            (check-command root args)
+            (test/is (.isFile (io/file root expected source)))
+            (when (= "api" module-name)
+              (test/is (pos? (:exit (capture-command root args)))))))))))
+
 (test/deftest mixed-workspace-builds-without-a-template-runtime
   (support/with-directory
     (fn [root]

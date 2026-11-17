@@ -51,10 +51,15 @@
   (let [namespace (create-namespace opts)
         platform (validate-choice (get opts :platform :clj) #{:clj :cljs} :platform)
         compiler (when (= platform :cljs)
-                   (validate-choice (get opts :compiler :shadow) #{:shadow :cljs} :compiler))]
+                   (validate-choice (get opts :compiler :shadow) #{:shadow :cljs} :compiler))
+        target-dir (:target-dir opts)]
     (when (and (= platform :clj) (contains? opts :compiler))
       (throw (ex-info ":compiler applies only to :platform :cljs." {})))
     {:namespace namespace :kind (name kind) :platform (name platform)
+     ;; deps-new normalizes both omitted and bare-name destinations to main.
+     :target-dir (if (or (nil? target-dir) (= (:main opts) target-dir))
+                   (str (name kind) "s/" (:main opts))
+                   target-dir)
      :compiler (some-> compiler name)
      :init-script (if (= :cljs compiler) (str "<script>" (str/replace namespace "-" "_") ".core.init();</script>") "")
      :module-deps (format-edn (create-module-deps namespace kind platform compiler))}))
