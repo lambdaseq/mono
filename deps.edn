@@ -1,5 +1,6 @@
 {:paths ["src" "resources"]
- :deps {org.clojure/clojure {:mvn/version "1.12.4"}}
+ :deps {org.clojure/clojure {:mvn/version "1.12.4"}
+        rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}}
  :aliases
  {:new {:extra-deps {io.github.seancorfield/deps-new
                      {:git/tag "v0.10.3" :git/sha "2c012c42185f9f14448f561481e6b39088e0fc82"}}

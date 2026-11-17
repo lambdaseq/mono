@@ -1,3 +1,4 @@
 {:description "Self-contained Clojure workspaces, applications, and libraries."
- :data-fn mono.template/create-template-data
- :template-fn mono.template/configure-template}
+ :data-fn mono.template/prepare-template-data!
+ :template-fn mono.template/configure-template
+ :post-process-fn mono.registration/register-module!}

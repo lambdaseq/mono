@@ -62,16 +62,17 @@ clojure -Tnew create :template io.github.lambdaseq/mono :kind :lib \
 These commands use the installed deps-new tool. See [mono's setup instructions](https://github.com/lambdaseq/mono#setup).
 Apps default to `apps/NAME`; libraries default to `libs/NAME`.
 Override with `:target-dir '"custom/path"'`; use `:target-dir '"./NAME"'` for a sibling directory.
-Register each module in the `modules` map, for example:
+Generation registers each module in `build.clj` and adds it to root `:dev` dependencies for workspace REPL access.
+For the library above, the `modules` entry is:
 
 ```clojure
 :shared {:kind :lib :dir "libs/shared" :platform :clj :lib {{prefix}}/shared}
 ```
 
-The whole `modules` map is quoted, so its symbol values need no inner quote.
-Use `:platform :cljs` and `:compiler :shadow` or `:compiler :cljs` for CLJS modules.
-CLJ apps also set `:main` to the application's namespace symbol.
-Add its local coordinates to root `:dev` for workspace REPL access. Consumers reference sibling libraries with relative `:local/root` dependencies.
+Use `:platform :cljs` and `:compiler :shadow` or `:compiler :cljs` for CLJS modules; these settings are registered automatically.
+App entries include `:main`. Conflicting registrations fail before files are generated.
+Use `:register false` for manual registration or a computed `modules` value.
+Consumers declare sibling libraries through relative `:local/root` dependencies in their own `deps.edn`.
 For plain CLJS, add test namespaces to the module's `dev/.../test_runner.cljs`. Shadow discovers namespaces ending in `-test`.
 
 These files belong to this project. Change or extend the functions directly; builds do not load mono or deps-new.

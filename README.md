@@ -112,7 +112,8 @@ Apps default to `apps/NAME`; libraries default to `libs/NAME`, relative to the w
 Override the destination with `:target-dir '"custom/path"'`.
 deps-new treats an explicit bare `NAME` like its default; use `:target-dir '"./NAME"'` to keep that directory outside `apps/` or `libs/`.
 
-Register each module in the generated workspace's quoted `modules` map:
+Generation inside a workspace registers each module in `build.clj` and adds its local coordinates to root `:dev` dependencies.
+Module IDs use the part after `/` in `:name`. Entries include the platform, compiler, and app entry point:
 
 ```clojure
 :shared {:kind :lib :dir "libs/shared" :platform :clj :lib acme.my-project/shared}
@@ -124,8 +125,12 @@ Register each module in the generated workspace's quoted `modules` map:
       :lib acme.my-project/web :main acme.my-project.web.core}
 ```
 
-Add local coordinates to root `:dev` for workspace REPL access.
-Consumers reference sibling libraries through their own `deps.edn`:
+Existing comments, other build functions, and aliases are preserved.
+Conflicting module IDs, Maven coordinates, directories, or root dependencies fail before files are generated.
+Use `:register false` to manage registration manually, including builds with a computed `modules` value.
+Outside a workspace, generation creates the module without changing parent files.
+
+Consumers still declare sibling library dependencies in their own `deps.edn`:
 
 ```clojure
 {:deps {acme.my-project/shared {:local/root "../../libs/shared"}}}

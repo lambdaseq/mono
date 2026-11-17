@@ -32,6 +32,7 @@
     (fn [root]
       (doseq [opts [{:layout :unknown}
                     {:kind :unknown}
+                    {:kind :lib :register :unknown}
                     {:kind :app :platform :python}
                     {:kind :lib :platform :clj :compiler :shadow}
                     {:kind :lib :platform :cljs :compiler :unknown}

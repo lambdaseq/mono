@@ -1,6 +1,6 @@
 # Dependency pins
 
-Pins were checked on 2026-11-16. All selected releases were at least seven days old.
+Pins were checked on 2026-11-16, with rewrite-clj checked on 2026-11-17. All selected releases were at least seven days old.
 
 | Dependency | Version or revision | Publication evidence (UTC) |
 | --- | --- | --- |
@@ -12,8 +12,10 @@ Pins were checked on 2026-11-16. All selected releases were at least seven days 
 | org.clojure/clojurescript | 1.12.145 | POM Last-Modified: 2026-05-06 18:27:40 |
 | thheller/shadow-cljs | 3.4.11 | POM Last-Modified: 2026-05-18 05:31:26 |
 | nrepl/nrepl | 1.3.0 | POM Last-Modified: 2024-08-13 13:05:10 |
+| rewrite-clj/rewrite-clj | 1.1.47 | POM Last-Modified: 2023-03-25 19:18:57; checked 2026-11-17 |
 
 The deps-new dependency belongs to template generation and testing. Generated builds depend on tools.build and deps-deploy, with their own module dependencies.
+rewrite-clj preserves workspace comments and formatting during generation. Generated workspaces do not depend on it.
 The CLJS version matches Shadow CLJS 3.4.11. Its Closure compiler requires JDK 21+.
 
 Before adding or changing a pin, verify its POM Last-Modified header or tagged commit date and reject releases under seven days old.

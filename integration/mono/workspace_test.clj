@@ -21,18 +21,16 @@
 (defn save-edn [file value]
   (spit file (with-out-str (pprint/pprint value))))
 
-(defn register-module [workspace id module]
-  (spit (io/file workspace "build.clj")
-        (str "\n(def modules (assoc modules " (pr-str id) " '" (pr-str module) "))\n")
-        :append true))
-
-(test/deftest module-directories-default-through-the-cli
+(defn read-template-command! []
   (let [project-deps (support/read-edn (io/file "deps.edn"))
         cli-deps (-> project-deps
                      (update :paths #(mapv (fn [path] (str (.getCanonicalFile (io/file path)))) %))
-                     (assoc :aliases {:new (get-in project-deps [:aliases :new])}))
-        command ["clojure" "-Sdeps" (pr-str cli-deps) "-X:new"
-                 ":template" "local%io.github.lambdaseq/mono"]]
+                     (assoc :aliases {:new (get-in project-deps [:aliases :new])}))]
+    ["clojure" "-Sdeps" (pr-str cli-deps) "-X:new"
+     ":template" "local%io.github.lambdaseq/mono"]))
+
+(test/deftest module-directories-default-through-the-cli
+  (let [command (read-template-command!)]
     (support/with-directory
       (fn [root]
         (doseq [[kind platform module-name target-dir expected]
@@ -56,6 +54,19 @@
             (test/is (.isFile (io/file root expected source)))
             (when (= "api" module-name)
               (test/is (pos? (:exit (capture-command root args)))))))))))
+
+(test/deftest cli-generated-modules-work-through-root-build-and-repl-alias
+  (let [command (read-template-command!)]
+    (support/with-directory
+      (fn [root]
+        (check-command root (into command [":name" "acme/workspace"]))
+        (let [workspace (io/file root "workspace")]
+          (check-command workspace (into command [":name" "acme/api" ":kind" ":app"]))
+          (check-command workspace (into command [":name" "acme/shared" ":kind" ":lib"]))
+          (check-command workspace ["clojure" "-T:build" "test" ":modules" "[:api :shared]"])
+          (test/is (str/includes? (:output (check-command workspace ["clojure" "-M:dev" "-e"
+                                                                     "(require 'acme.api.core 'acme.shared.core) (println :ready)"]))
+                                  ":ready")))))))
 
 (test/deftest mixed-workspace-builds-without-a-template-runtime
   (support/with-directory
@@ -89,7 +100,6 @@
                                           [:deps 'acme.libraries/example-lib] {:local/root "../example-lib"}))
         (spit (io/file consumer "src/acme/consumer/core.clj")
               "(ns acme.consumer.core (:require [acme.libraries.example-lib.core :as shared]))\n(defn greet [person] (shared/greet person))\n")
-        (register-module workspace :consumer {:kind :lib :dir "libs/consumer" :platform :clj :lib 'acme/consumer})
         ;; Packaging must respect module paths instead of assuming every module uses src/.
         (.renameTo (io/file workspace "libs/example-lib/src") (io/file workspace "libs/example-lib/source"))
         (let [file (io/file workspace "libs/example-lib/deps.edn")]
@@ -122,10 +132,7 @@
           (let [directory (str (if (= kind :app) "apps/" "libs/") (name id))
                 module-name (symbol "acme" (name id))]
             (support/generate workspace directory {:template 'io.github.lambdaseq/mono :kind kind :name module-name
-                                                   :platform :cljs :compiler compiler})
-            (register-module workspace id (cond-> {:kind kind :dir directory :platform :cljs
-                                                   :compiler compiler :lib module-name}
-                                            (= kind :app) (assoc :main (symbol (str "acme." (name id) ".core")))))))
+                                                   :platform :cljs :compiler compiler})))
         (check-command workspace ["clojure" "-T:build" "ci" ":modules" (pr-str ids)])
         (doseq [id [:web-shadow :web-plain]]
           (test/is (.isFile (io/file workspace "apps" (name id) "target/public/index.html"))))

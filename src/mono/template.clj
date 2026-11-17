@@ -1,6 +1,7 @@
 (ns mono.template
   (:require [clojure.pprint :as pprint]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [mono.registration :as registration]))
 
 (def versions
   {:clojure "1.12.4" :build "0.10.11" :cljs "1.12.145" :shadow "3.4.11" :nrepl "1.3.0"})
@@ -101,6 +102,11 @@
     :workspace (create-workspace-data opts)
     :app (create-module-data opts :app)
     :lib (create-module-data opts :lib)))
+
+(defn prepare-template-data! [opts]
+  (let [data (create-template-data opts)
+        plan (registration/prepare-registration! (merge opts data))]
+    (cond-> data plan (assoc :registration plan))))
 
 (defn configure-workspace-template [template {:keys [layout]}]
   (assoc template :transform
